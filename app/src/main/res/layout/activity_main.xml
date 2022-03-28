@@ -21,6 +21,12 @@
             android:layout_height="wrap_content"
             android:text="Camera" />
 
+        <androidx.appcompat.widget.AppCompatButton
+            android:id="@+id/btnCameraX"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="CameraX" />
+
         <androidx.appcompat.widget.AppCompatImageView
             android:id="@+id/imgImage"
             android:layout_width="match_parent"

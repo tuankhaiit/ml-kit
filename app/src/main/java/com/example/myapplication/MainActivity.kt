@@ -6,6 +6,7 @@ import android.os.Bundle
 import android.util.Log
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.FileProvider
 import androidx.databinding.DataBindingUtil
@@ -19,24 +20,36 @@ import com.google.mlkit.vision.face.FaceLandmark
 import com.google.mlkit.vision.text.TextRecognition
 import com.google.mlkit.vision.text.latin.TextRecognizerOptions
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
 
 class MainActivity : AppCompatActivity() {
-    lateinit var binding: ActivityMainBinding
+    private lateinit var binding: ActivityMainBinding
+    private val viewModel: MainViewModel by viewModels()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = DataBindingUtil.setContentView(this, R.layout.activity_main)
 
         initViews()
+        initFlows()
     }
 
     private fun initViews() {
         binding.apply {
+            btnCameraX.setOnClickListener {
+                permissionCameraXRequestLauncher.launch(
+                    arrayOf(
+                        Manifest.permission.CAMERA,
+                        Manifest.permission.RECORD_AUDIO
+                    )
+                )
+            }
+
             btnCamera.setOnClickListener {
-                permissionRequestLauncher.launch(Manifest.permission.CAMERA)
+                permissionCameraRequestLauncher.launch(Manifest.permission.CAMERA)
             }
 
             btnGallery.setOnClickListener {
@@ -44,6 +57,17 @@ class MainActivity : AppCompatActivity() {
             }
         }
     }
+
+    private fun initFlows() {
+        viewModel.apply {
+            lifecycleScope.launchWhenCreated {
+                takePictureFlow.collectLatest {
+                    binding.imgImage.setImageBitmap(it)
+                }
+            }
+        }
+    }
+
 
     private fun textRecognizer(bitmap: Bitmap) {
         val image = InputImage.fromBitmap(bitmap, 0)
@@ -177,8 +201,18 @@ class MainActivity : AppCompatActivity() {
         presentImage(bitmap)
     }
 
+    private fun openCameraX() {
+        supportFragmentManager.beginTransaction().let {
+            val fragment = CameraXFragment.newInstance()
+            it.replace(android.R.id.content, fragment, "CameraX")
+            it.addToBackStack("CameraX")
+            it.commitAllowingStateLoss()
+        }
+    }
+
     private val getContentLauncher =
         registerForActivityResult(ActivityResultContracts.GetContent()) { uri ->
+            uri ?: return@registerForActivityResult
             lifecycleScope.launch {
                 try {
                     val bitmap = withContext(Dispatchers.IO) {
@@ -211,11 +245,21 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
-    private val permissionRequestLauncher = registerForActivityResult(
+    private val permissionCameraRequestLauncher = registerForActivityResult(
         ActivityResultContracts.RequestPermission()
     ) { granted ->
         if (granted) {
             pickImageFromCamera()
+        } else {
+            Toast.makeText(this, "Permission denied!", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    private val permissionCameraXRequestLauncher = registerForActivityResult(
+        ActivityResultContracts.RequestMultiplePermissions()
+    ) { map ->
+        if (map.values.all { it }) {
+            openCameraX()
         } else {
             Toast.makeText(this, "Permission denied!", Toast.LENGTH_SHORT).show()
         }
