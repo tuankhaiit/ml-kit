@@ -204,7 +204,7 @@ class MainActivity : AppCompatActivity() {
     private fun openCameraX() {
         supportFragmentManager.beginTransaction().let {
             val fragment = CameraXFragment.newInstance()
-            it.replace(android.R.id.content, fragment, "CameraX")
+            it.add(android.R.id.content, fragment, "CameraX")
             it.addToBackStack("CameraX")
             it.commitAllowingStateLoss()
         }

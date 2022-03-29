@@ -33,8 +33,14 @@ object BitmapUtils {
                         ExifInterface.ORIENTATION_ROTATE_270 -> matrix.postRotate(270F)
                     }
 
-                    val rotatedBitmap =
-                        Bitmap.createBitmap(bitmap, 0, 0, bitmap.width, bitmap.height, matrix, true)
+                    val rotatedBitmap = Bitmap.createBitmap(
+                        bitmap,
+                        0, 0,
+                        bitmap.width,
+                        bitmap.height,
+                        matrix,
+                        true
+                    )
                     bitmap.recycle()
                     rotatedBitmap
                 } catch (e: Exception) {
