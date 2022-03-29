@@ -42,6 +42,22 @@ class CameraXFragment : Fragment() {
     private lateinit var cameraProviderFuture: ListenableFuture<ProcessCameraProvider>
     private lateinit var camera: Camera
 
+    // Orientation
+    private val orientationEventListener by lazy {
+        object : OrientationEventListener(requireContext()) {
+            override fun onOrientationChanged(orientation: Int) {
+                // Monitors orientation values to determine the target rotation value
+                val rotation: Int = when (orientation) {
+                    in 45..134 -> Surface.ROTATION_270
+                    in 135..224 -> Surface.ROTATION_180
+                    in 225..314 -> Surface.ROTATION_90
+                    else -> Surface.ROTATION_0
+                }
+                imageCapture.targetRotation = rotation
+            }
+        }
+    }
+
     // Preview
     private val preview by lazy {
         Preview.Builder()
@@ -121,6 +137,16 @@ class CameraXFragment : Fragment() {
         startCamera()
     }
 
+    override fun onStart() {
+        super.onStart()
+        orientationEventListener.enable()
+    }
+
+    override fun onStop() {
+        super.onStop()
+        orientationEventListener.disable()
+    }
+
     @SuppressLint("ClickableViewAccessibility")
     private fun initViews() {
         binding.btnFlash.setOnClickListener {
@@ -176,21 +202,6 @@ class CameraXFragment : Fragment() {
         cameraProviderFuture.addListener({
             // Used to bind the lifecycle of cameras to the lifecycle owner
             val cameraProvider = cameraProviderFuture.get()
-
-            val orientationEventListener = object : OrientationEventListener(requireContext()) {
-                override fun onOrientationChanged(orientation: Int) {
-                    // Monitors orientation values to determine the target rotation value
-                    val rotation: Int = when (orientation) {
-                        in 45..134 -> Surface.ROTATION_270
-                        in 135..224 -> Surface.ROTATION_180
-                        in 225..314 -> Surface.ROTATION_90
-                        else -> Surface.ROTATION_0
-                    }
-                    imageCapture.targetRotation = rotation
-                }
-            }
-            orientationEventListener.enable()
-
             try {
                 // Unbind use cases before rebinding
                 cameraProvider.unbindAll()
