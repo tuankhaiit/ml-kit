@@ -2,6 +2,7 @@ package com.example.myapplication
 
 import android.annotation.SuppressLint
 import android.os.Bundle
+import android.util.Size
 import android.util.TypedValue
 import android.view.*
 import android.widget.ProgressBar
@@ -19,6 +20,7 @@ import androidx.fragment.app.activityViewModels
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.lifecycleScope
 import com.example.myapplication.databinding.FragmentCameraBinding
+import com.example.myapplication.faceDetection.FaceContourDetectionProcessor
 import com.google.common.util.concurrent.ListenableFuture
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.CoroutineStart
@@ -29,6 +31,7 @@ import java.io.File
 import java.util.concurrent.TimeUnit
 import kotlin.coroutines.CoroutineContext
 import kotlin.coroutines.EmptyCoroutineContext
+import kotlin.math.abs
 
 class CameraXFragment : Fragment() {
     private val sharedViewModel: MainViewModel by activityViewModels()
@@ -58,35 +61,40 @@ class CameraXFragment : Fragment() {
         }
     }
 
+    // Camera selector
+    private lateinit var cameraSelector: CameraSelector
+
     // Preview
-    private val preview by lazy {
-        Preview.Builder()
-            .setTargetAspectRatio(AspectRatio.RATIO_16_9)
-            .build().also {
-                it.setSurfaceProvider(binding.viewFinder.surfaceProvider)
+    private lateinit var preview: Preview
+
+    // Camera capture
+    private lateinit var imageCapture: ImageCapture
+
+    // Analysis
+    private val imageAnalysis by lazy {
+        ImageAnalysis.Builder()
+            .setTargetResolution(Size(1280, 720))
+            .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
+            .build()
+            .also {
+                it.setAnalyzer(mainExecutor, faceDetectionProcessor)
             }
     }
 
-    // Select back camera as a default
-    private val cameraSelector by lazy {
-        CameraSelector.Builder()
-            .requireLensFacing(CameraSelector.LENS_FACING_BACK)
-            .build()
+    // Face detection
+    private val faceDetectionProcessor by lazy {
+        FaceContourDetectionProcessor(binding.graphicOverlay)
     }
 
-    // Camera capture
-    private val imageCapture by lazy {
-        ImageCapture.Builder()
-            .setTargetAspectRatio(AspectRatio.RATIO_16_9)
-            .setCaptureMode(ImageCapture.CAPTURE_MODE_MAXIMIZE_QUALITY)
-            .setFlashMode(if (flashOn) ImageCapture.FLASH_MODE_ON else ImageCapture.FLASH_MODE_OFF)
-            .build()
-    }
-
+    private var cameraFacing = CameraSelector.LENS_FACING_BACK
+        set(value) {
+            field = value
+            startCamera()
+        }
     private var flashOn = false
         set(value) {
             field = value
-            binding.btnCapture.text = if (value) "Flash On" else "Flash Off"
+            binding.btnFlash.text = if (value) "Flash On" else "Flash Off"
         }
 
     private val focusView by lazy {
@@ -145,10 +153,14 @@ class CameraXFragment : Fragment() {
     override fun onStop() {
         super.onStop()
         orientationEventListener.disable()
+        faceDetectionProcessor.stop()
     }
 
     @SuppressLint("ClickableViewAccessibility")
     private fun initViews() {
+        binding.btnFlipCamera.setOnClickListener {
+            cameraFacing = abs(cameraFacing - 1)
+        }
         binding.btnFlash.setOnClickListener {
             flashOn = flashOn.not()
         }
@@ -200,18 +212,38 @@ class CameraXFragment : Fragment() {
 
     private fun startCamera() {
         cameraProviderFuture.addListener({
-            // Used to bind the lifecycle of cameras to the lifecycle owner
-            val cameraProvider = cameraProviderFuture.get()
             try {
+                // Used to bind the lifecycle of cameras to the lifecycle owner
+                val cameraProvider = cameraProviderFuture.get()
+
                 // Unbind use cases before rebinding
                 cameraProvider.unbindAll()
+
+                // Camera selector
+                cameraSelector = CameraSelector.Builder()
+                    .requireLensFacing(cameraFacing)
+                    .build()
+
+                // Preview
+                preview = Preview.Builder()
+                    .setTargetAspectRatio(AspectRatio.RATIO_16_9)
+                    .build().also {
+                        it.setSurfaceProvider(binding.viewFinder.surfaceProvider)
+                    }
+
+                // Image capture
+                imageCapture = ImageCapture.Builder()
+                    .setTargetAspectRatio(AspectRatio.RATIO_16_9)
+                    .setCaptureMode(ImageCapture.CAPTURE_MODE_MAXIMIZE_QUALITY)
+                    .build()
 
                 // Bind use cases to camera
                 camera = cameraProvider.bindToLifecycle(
                     viewLifecycleOwner,
                     cameraSelector,
                     preview,
-                    imageCapture
+                    imageCapture,
+                    imageAnalysis
                 )
                 updateExposureBar()
             } catch (e: Exception) {
@@ -223,6 +255,11 @@ class CameraXFragment : Fragment() {
     private fun takePhoto() {
         val file = File(requireContext().filesDir, TEMP_FILE_NAME)
         val outPutOptions = ImageCapture.OutputFileOptions.Builder(file).build()
+
+        imageCapture.flashMode = if (flashOn)
+            ImageCapture.FLASH_MODE_ON
+        else
+            ImageCapture.FLASH_MODE_OFF
         imageCapture.takePicture(
             outPutOptions,
             mainExecutor,
@@ -279,14 +316,6 @@ class CameraXFragment : Fragment() {
         binding.layout.removeView(focusView)
     }
 
-    private fun launch(
-        context: CoroutineContext = EmptyCoroutineContext,
-        start: CoroutineStart = CoroutineStart.DEFAULT,
-        block: suspend CoroutineScope.() -> Unit
-    ): Job {
-        return viewLifecycleOwner.lifecycleScope.launch(context, start, block)
-    }
-
     private fun updateExposureBar() {
         camera.cameraInfo.exposureState.let {
             binding.exposureBar.apply {
@@ -302,6 +331,14 @@ class CameraXFragment : Fragment() {
         val max = binding.exposureBar.max
         val min = binding.exposureBar.min
         binding.exposureBar.progress = (max + min) / 2
+    }
+
+    private fun launch(
+        context: CoroutineContext = EmptyCoroutineContext,
+        start: CoroutineStart = CoroutineStart.DEFAULT,
+        block: suspend CoroutineScope.() -> Unit
+    ): Job {
+        return viewLifecycleOwner.lifecycleScope.launch(context, start, block)
     }
 
     companion object {
