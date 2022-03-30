@@ -2,7 +2,6 @@ package com.example.myapplication
 
 import android.annotation.SuppressLint
 import android.os.Bundle
-import android.util.Size
 import android.util.TypedValue
 import android.view.*
 import android.widget.ProgressBar
@@ -73,7 +72,7 @@ class CameraXFragment : Fragment() {
     // Analysis
     private val imageAnalysis by lazy {
         ImageAnalysis.Builder()
-            .setTargetResolution(Size(1280, 720))
+//            .setTargetResolution(Size(1280, 720))
             .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
             .build()
             .also {
