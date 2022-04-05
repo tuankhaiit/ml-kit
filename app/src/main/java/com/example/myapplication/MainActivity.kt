@@ -8,9 +8,12 @@ import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
+import androidx.camera.view.PreviewView
 import androidx.core.content.FileProvider
 import androidx.databinding.DataBindingUtil
 import androidx.lifecycle.lifecycleScope
+import com.example.myapplication.camerax.CameraXConfiguration
+import com.example.myapplication.camerax.CameraXFragment
 import com.example.myapplication.databinding.ActivityMainBinding
 import com.google.mlkit.vision.common.InputImage
 import com.google.mlkit.vision.face.FaceContour
@@ -35,6 +38,8 @@ class MainActivity : AppCompatActivity() {
 
         initViews()
         initFlows()
+
+        openCameraX()
     }
 
     private fun initViews() {
@@ -203,7 +208,10 @@ class MainActivity : AppCompatActivity() {
 
     private fun openCameraX() {
         supportFragmentManager.beginTransaction().let {
-            val fragment = CameraXFragment.newInstance()
+            val config = CameraXConfiguration.Builder()
+                .setPreviewScaleType(PreviewView.ScaleType.FIT_END)
+                .build()
+            val fragment = CameraXFragment.newInstance(config)
             it.add(android.R.id.content, fragment, "CameraX")
             it.addToBackStack("CameraX")
             it.commitAllowingStateLoss()

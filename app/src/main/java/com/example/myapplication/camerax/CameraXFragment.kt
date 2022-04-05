@@ -1,4 +1,4 @@
-package com.example.myapplication
+package com.example.myapplication.camerax
 
 import android.annotation.SuppressLint
 import android.os.Bundle
@@ -9,6 +9,7 @@ import android.widget.SeekBar
 import androidx.camera.core.*
 import androidx.camera.core.FocusMeteringAction.*
 import androidx.camera.lifecycle.ProcessCameraProvider
+import androidx.camera.view.PreviewView
 import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.constraintlayout.widget.ConstraintSet
 import androidx.core.content.ContextCompat
@@ -18,6 +19,10 @@ import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.lifecycleScope
+import com.example.myapplication.BitmapUtils
+import com.example.myapplication.CameraXViewModel
+import com.example.myapplication.MainViewModel
+import com.example.myapplication.R
 import com.example.myapplication.databinding.FragmentCameraBinding
 import com.example.myapplication.faceDetection.FaceContourDetectionProcessor
 import com.google.common.util.concurrent.ListenableFuture
@@ -64,10 +69,21 @@ class CameraXFragment : Fragment() {
     private lateinit var cameraSelector: CameraSelector
 
     // Preview
-    private lateinit var preview: Preview
+    private val preview: Preview by lazy {
+        Preview.Builder()
+            .setTargetAspectRatio(aspectRatio)
+            .build().also {
+                it.setSurfaceProvider(binding.viewFinder.surfaceProvider)
+            }
+    }
 
     // Camera capture
-    private lateinit var imageCapture: ImageCapture
+    private val imageCapture: ImageCapture by lazy {
+        ImageCapture.Builder()
+            .setTargetAspectRatio(aspectRatio)
+            .setCaptureMode(ImageCapture.CAPTURE_MODE_MAXIMIZE_QUALITY)
+            .build()
+    }
 
     // Analysis
     private val imageAnalysis by lazy {
@@ -82,20 +98,15 @@ class CameraXFragment : Fragment() {
 
     // Face detection
     private val faceDetectionProcessor by lazy {
-        FaceContourDetectionProcessor(binding.graphicOverlay)
+        FaceContourDetectionProcessor(binding.graphicOverlay, previewScaleType, aspectRatio)
     }
 
-    private var cameraFacing = CameraSelector.LENS_FACING_BACK
-        set(value) {
-            field = value
-            startCamera()
-        }
+    private var cameraFacing: Int = CameraSelector.LENS_FACING_BACK
     private var flashOn = false
-        set(value) {
-            field = value
-            binding.btnFlash.text = if (value) "Flash On" else "Flash Off"
-        }
+    private var aspectRatio = AspectRatio.RATIO_16_9
+    private var previewScaleType = PreviewView.ScaleType.FIT_END
 
+    // Animation focus view when tap on screen
     private val focusView by lazy {
         ProgressBar(requireContext()).apply {
             id = View.generateViewId()
@@ -137,6 +148,7 @@ class CameraXFragment : Fragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+        initConfig()
         initViews()
         initCamera()
         initEvents()
@@ -155,19 +167,29 @@ class CameraXFragment : Fragment() {
         faceDetectionProcessor.stop()
     }
 
+    private fun initConfig() {
+        (arguments?.getSerializable(CONFIGURATION_KEY) as? CameraXConfiguration)?.let { config ->
+            aspectRatio = config.aspectRatio
+            previewScaleType = config.previewScaleType
+        }
+    }
+
     @SuppressLint("ClickableViewAccessibility")
     private fun initViews() {
         binding.btnFlipCamera.setOnClickListener {
             cameraFacing = abs(cameraFacing - 1)
+            startCamera()
         }
         binding.btnFlash.setOnClickListener {
             flashOn = flashOn.not()
+            binding.btnFlash.text = if (flashOn) "Flash On" else "Flash Off"
         }
         binding.btnCapture.setOnClickListener {
             it.isEnabled = false
             takePhoto()
         }
         binding.viewFinder.let { surfaceView ->
+            surfaceView.scaleType = previewScaleType
             surfaceView.setOnTouchListener { _, event ->
                 if (event.action == MotionEvent.ACTION_DOWN) {
                     launch {
@@ -223,19 +245,6 @@ class CameraXFragment : Fragment() {
                     .requireLensFacing(cameraFacing)
                     .build()
 
-                // Preview
-                preview = Preview.Builder()
-                    .setTargetAspectRatio(AspectRatio.RATIO_16_9)
-                    .build().also {
-                        it.setSurfaceProvider(binding.viewFinder.surfaceProvider)
-                    }
-
-                // Image capture
-                imageCapture = ImageCapture.Builder()
-                    .setTargetAspectRatio(AspectRatio.RATIO_16_9)
-                    .setCaptureMode(ImageCapture.CAPTURE_MODE_MAXIMIZE_QUALITY)
-                    .build()
-
                 // Bind use cases to camera
                 camera = cameraProvider.bindToLifecycle(
                     viewLifecycleOwner,
@@ -251,6 +260,7 @@ class CameraXFragment : Fragment() {
         }, mainExecutor)
     }
 
+    @SuppressLint("RestrictedApi")
     private fun takePhoto() {
         val file = File(requireContext().filesDir, TEMP_FILE_NAME)
         val outPutOptions = ImageCapture.OutputFileOptions.Builder(file).build()
@@ -341,10 +351,17 @@ class CameraXFragment : Fragment() {
     }
 
     companion object {
+        private const val CONFIGURATION_KEY = "CONFIGURATION"
         private const val TEMP_FILE_NAME = "temp_photo.jpeg"
 
-        fun newInstance(): CameraXFragment {
-            return CameraXFragment()
+        fun newInstance(config: CameraXConfiguration? = null): CameraXFragment {
+            return CameraXFragment().apply {
+                config?.let {
+                    arguments = Bundle().apply {
+                        putSerializable(CONFIGURATION_KEY, config)
+                    }
+                }
+            }
         }
     }
 }

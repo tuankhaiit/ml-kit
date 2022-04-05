@@ -7,26 +7,19 @@ import android.graphics.Rect
 import android.graphics.RectF
 import android.util.AttributeSet
 import android.view.View
+import androidx.camera.core.AspectRatio
 import androidx.camera.core.CameraSelector
-import kotlin.math.ceil
+import androidx.camera.view.PreviewView
+import kotlin.math.max
 
 open class GraphicOverlay(context: Context?, attrs: AttributeSet?) :
     View(context, attrs) {
 
     private val lock = Any()
     private val graphics: MutableList<Graphic> = ArrayList()
-    var mScale: Float? = null
-    var mOffsetX: Float? = null
-    var mOffsetY: Float? = null
     var cameraSelector: Int = CameraSelector.LENS_FACING_BACK
 
     fun isFrontMode() = cameraSelector == CameraSelector.LENS_FACING_FRONT
-
-    fun toggleSelector() {
-        cameraSelector =
-            if (cameraSelector == CameraSelector.LENS_FACING_BACK) CameraSelector.LENS_FACING_FRONT
-            else CameraSelector.LENS_FACING_BACK
-    }
 
     fun clear() {
         synchronized(lock) { graphics.clear() }
@@ -51,43 +44,117 @@ open class GraphicOverlay(context: Context?, attrs: AttributeSet?) :
         }
     }
 
-    abstract class Graphic(private val overlay: GraphicOverlay) {
+    abstract class Graphic(
+        private val overlay: GraphicOverlay,
+        private val scaleType: PreviewView.ScaleType,
+        private val aspectRatio: Int
+    ) {
 
         abstract fun draw(canvas: Canvas?)
 
-        fun calculateRect(height: Float, width: Float, boundingBoxT: Rect): RectF {
+        fun calculateRect(imageHeight: Float, imageWidth: Float, boundingBoxT: Rect): RectF {
 
             // for land scape
             fun isLandScapeMode(): Boolean {
                 return overlay.context.resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
             }
 
-            fun whenLandScapeModeWidth(): Float {
+            // Default the image was rotate 90 degree.
+            // We will swap values of width and height if PORTRAIT mode
+            fun getImageWidth(): Float {
                 return when (isLandScapeMode()) {
-                    true -> width
-                    false -> height
+                    true -> imageWidth
+                    false -> imageHeight
                 }
             }
 
-            fun whenLandScapeModeHeight(): Float {
+            // Default the image was rotate 90 degree.
+            // We will swap values of width and height if PORTRAIT mode
+            fun getImageHeight(): Float {
                 return when (isLandScapeMode()) {
-                    true -> height
-                    false -> width
+                    true -> imageHeight
+                    false -> imageWidth
                 }
             }
 
-            val scaleX = overlay.width.toFloat() / whenLandScapeModeWidth()
-            val scaleY = overlay.height.toFloat() / whenLandScapeModeHeight()
-            val scale = scaleX.coerceAtLeast(scaleY)
-            overlay.mScale = scale
+            fun getRatio(): Float = when (aspectRatio) {
+                AspectRatio.RATIO_16_9 -> 16 / 9f
+                else -> 4 / 3f
+            }
+
+            fun getPreviewWidth(): Float {
+                return when (isLandScapeMode()) {
+                    true -> when (scaleType) {
+                        PreviewView.ScaleType.FILL_START,
+                        PreviewView.ScaleType.FILL_CENTER,
+                        PreviewView.ScaleType.FILL_END -> overlay.width.toFloat()
+                        else -> overlay.height.toFloat() * getRatio()
+                    }
+                    false -> when (scaleType) {
+                        PreviewView.ScaleType.FILL_START,
+                        PreviewView.ScaleType.FILL_CENTER,
+                        PreviewView.ScaleType.FILL_END -> overlay.height.toFloat() / getRatio()
+                        else -> overlay.width.toFloat()
+                    }
+                }
+            }
+
+            fun getPreviewHeight(): Float {
+                return when (isLandScapeMode()) {
+                    true -> when (scaleType) {
+                        PreviewView.ScaleType.FILL_START,
+                        PreviewView.ScaleType.FILL_CENTER,
+                        PreviewView.ScaleType.FILL_END -> overlay.width.toFloat() / getRatio()
+                        else -> overlay.height.toFloat()
+                    }
+                    false -> when (scaleType) {
+                        PreviewView.ScaleType.FILL_START,
+                        PreviewView.ScaleType.FILL_CENTER,
+                        PreviewView.ScaleType.FILL_END -> overlay.height.toFloat()
+                        else -> overlay.width.toFloat() * getRatio()
+                    }
+                }
+            }
+
+            fun getPreviewOffsetX(): Float = when (isLandScapeMode()) {
+                true -> when (scaleType) {
+                    PreviewView.ScaleType.FIT_START -> 0f
+                    PreviewView.ScaleType.FIT_END -> overlay.width - getPreviewWidth()
+                    else -> (overlay.width - getPreviewWidth()) / 2
+                }
+                false -> when (scaleType) {
+                    PreviewView.ScaleType.FILL_START -> 0f
+                    PreviewView.ScaleType.FILL_END -> overlay.width - getPreviewWidth()
+                    else -> (overlay.width - getPreviewWidth()) / 2
+                }
+            }
+
+            fun getPreviewOffsetY(): Float = when (isLandScapeMode()) {
+                true -> when (scaleType) {
+                    PreviewView.ScaleType.FILL_START,
+                    PreviewView.ScaleType.FIT_START,
+                    PreviewView.ScaleType.FIT_CENTER,
+                    PreviewView.ScaleType.FIT_END -> 0f
+                    PreviewView.ScaleType.FILL_END -> overlay.height - getPreviewHeight()
+                    else -> (overlay.height - getPreviewHeight()) / 2
+                }
+                false -> when (scaleType) {
+                    PreviewView.ScaleType.FIT_START -> 0f
+                    PreviewView.ScaleType.FIT_END -> overlay.height - getPreviewHeight()
+                    else -> (overlay.height - getPreviewHeight()) / 2
+                }
+            }
+
+            val previewWidth = getPreviewWidth()
+            val previewHeight = getPreviewHeight()
+
+            val scaleX = previewWidth / getImageWidth()
+            val scaleY = previewHeight / getImageHeight()
+            val scale = max(scaleX, scaleY)
 
             // Calculate offset (we need to center the overlay on the target)
-            val offsetX = (overlay.width.toFloat() - ceil(whenLandScapeModeWidth() * scale)) / 2.0f
-            val offsetY =
-                (overlay.height.toFloat() - ceil(whenLandScapeModeHeight() * scale)) / 2.0f
-
-            overlay.mOffsetX = offsetX
-            overlay.mOffsetY = offsetY
+            val offsetX = (previewWidth - getImageWidth() * scale) / 2.0f + getPreviewOffsetX()
+            val offsetY = (previewHeight - getImageHeight() * scale) / 2.0f + getPreviewOffsetY()
 
             val mappedBox = RectF().apply {
                 left = boundingBoxT.right * scale + offsetX
@@ -96,14 +163,14 @@ open class GraphicOverlay(context: Context?, attrs: AttributeSet?) :
                 bottom = boundingBoxT.bottom * scale + offsetY
             }
 
-            // for front mode
-            if (overlay.isFrontMode()) {
-                val centerX = overlay.width.toFloat() / 2
-                mappedBox.apply {
-                    left = centerX + (centerX - left)
-                    right = centerX - (right - centerX)
-                }
-            }
+//            // for front mode
+//            if (overlay.isFrontMode()) {
+//                val centerX = overlay.width.toFloat() / 2
+//                mappedBox.apply {
+//                    left = centerX + (centerX - left)
+//                    right = centerX - (right - centerX)
+//                }
+//            }
             return mappedBox
         }
     }

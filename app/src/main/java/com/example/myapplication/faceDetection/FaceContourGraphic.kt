@@ -4,14 +4,17 @@ import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.Rect
+import androidx.camera.view.PreviewView
 import com.example.myapplication.camerax.GraphicOverlay
 import com.google.mlkit.vision.face.Face
 
 class FaceContourGraphic(
     overlay: GraphicOverlay,
+    scaleType: PreviewView.ScaleType,
+    aspectRatio: Int,
     private val face: Face,
     private val imageRect: Rect
-) : GraphicOverlay.Graphic(overlay) {
+) : GraphicOverlay.Graphic(overlay, scaleType, aspectRatio) {
 
     private val facePositionPaint: Paint
     private val idPaint: Paint

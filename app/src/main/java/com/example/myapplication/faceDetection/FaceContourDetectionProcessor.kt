@@ -2,6 +2,7 @@ package com.example.myapplication.faceDetection
 
 import android.graphics.Rect
 import android.util.Log
+import androidx.camera.view.PreviewView
 import com.example.myapplication.camerax.BaseImageAnalyzer
 import com.example.myapplication.camerax.GraphicOverlay
 import com.google.android.gms.tasks.Task
@@ -11,12 +12,18 @@ import com.google.mlkit.vision.face.FaceDetection
 import com.google.mlkit.vision.face.FaceDetectorOptions
 import java.io.IOException
 
-class FaceContourDetectionProcessor(override val graphicOverlay: GraphicOverlay) :
-    BaseImageAnalyzer<List<Face>>() {
+class FaceContourDetectionProcessor(
+    private val graphicOverlay: GraphicOverlay,
+    private val scaleType: PreviewView.ScaleType,
+    private val aspectRatio: Int
+) : BaseImageAnalyzer<List<Face>>() {
     private val realTimeOpts by lazy {
         FaceDetectorOptions.Builder()
             .setPerformanceMode(FaceDetectorOptions.PERFORMANCE_MODE_FAST)
             .setContourMode(FaceDetectorOptions.CONTOUR_MODE_NONE)
+            .setLandmarkMode(FaceDetectorOptions.LANDMARK_MODE_NONE)
+            .setClassificationMode(FaceDetectorOptions.CLASSIFICATION_MODE_NONE)
+            .setMinFaceSize(0.1f)
             .build()
     }
 
@@ -38,12 +45,11 @@ class FaceContourDetectionProcessor(override val graphicOverlay: GraphicOverlay)
 
     override fun onSuccess(
         results: List<Face>,
-        graphicOverlay: GraphicOverlay,
         rect: Rect
     ) {
         graphicOverlay.clear()
         results.forEach {
-            val faceGraphic = FaceContourGraphic(graphicOverlay, it, rect)
+            val faceGraphic = FaceContourGraphic(graphicOverlay, scaleType, aspectRatio, it, rect)
             graphicOverlay.add(faceGraphic)
         }
         graphicOverlay.postInvalidate()
