@@ -10,7 +10,6 @@ import com.google.mlkit.vision.common.InputImage
 import com.google.mlkit.vision.face.Face
 import com.google.mlkit.vision.face.FaceDetection
 import com.google.mlkit.vision.face.FaceDetectorOptions
-import java.io.IOException
 
 class FaceContourDetectionProcessor(
     private val graphicOverlay: GraphicOverlay,
@@ -33,14 +32,6 @@ class FaceContourDetectionProcessor(
 
     override fun detectInImage(image: InputImage): Task<List<Face>> {
         return detector.process(image)
-    }
-
-    override fun stop() {
-        try {
-            detector.close()
-        } catch (e: IOException) {
-            Log.e(TAG, "Exception thrown while trying to close Face Detector: $e")
-        }
     }
 
     override fun onSuccess(

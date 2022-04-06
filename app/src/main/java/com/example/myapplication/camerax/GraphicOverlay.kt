@@ -17,9 +17,9 @@ open class GraphicOverlay(context: Context?, attrs: AttributeSet?) :
 
     private val lock = Any()
     private val graphics: MutableList<Graphic> = ArrayList()
-    var cameraSelector: Int = CameraSelector.LENS_FACING_BACK
+    var cameraFacing: Int = CameraXFragment.DEFAULT_CAMERA_FACING
 
-    fun isFrontMode() = cameraSelector == CameraSelector.LENS_FACING_FRONT
+    fun isFrontMode() = cameraFacing == CameraSelector.LENS_FACING_FRONT
 
     fun clear() {
         synchronized(lock) { graphics.clear() }
@@ -53,6 +53,8 @@ open class GraphicOverlay(context: Context?, attrs: AttributeSet?) :
         abstract fun draw(canvas: Canvas?)
 
         fun calculateRect(imageHeight: Float, imageWidth: Float, boundingBoxT: Rect): RectF {
+            val screenWidth = overlay.width.toFloat()
+            val screenHeight = overlay.height.toFloat()
 
             // for land scape
             fun isLandScapeMode(): Boolean {
@@ -87,14 +89,14 @@ open class GraphicOverlay(context: Context?, attrs: AttributeSet?) :
                     true -> when (scaleType) {
                         PreviewView.ScaleType.FILL_START,
                         PreviewView.ScaleType.FILL_CENTER,
-                        PreviewView.ScaleType.FILL_END -> overlay.width.toFloat()
-                        else -> overlay.height.toFloat() * getRatio()
+                        PreviewView.ScaleType.FILL_END -> screenWidth
+                        else -> screenHeight * getRatio()
                     }
                     false -> when (scaleType) {
                         PreviewView.ScaleType.FILL_START,
                         PreviewView.ScaleType.FILL_CENTER,
-                        PreviewView.ScaleType.FILL_END -> overlay.height.toFloat() / getRatio()
-                        else -> overlay.width.toFloat()
+                        PreviewView.ScaleType.FILL_END -> screenHeight / getRatio()
+                        else -> screenWidth
                     }
                 }
             }
@@ -104,14 +106,14 @@ open class GraphicOverlay(context: Context?, attrs: AttributeSet?) :
                     true -> when (scaleType) {
                         PreviewView.ScaleType.FILL_START,
                         PreviewView.ScaleType.FILL_CENTER,
-                        PreviewView.ScaleType.FILL_END -> overlay.width.toFloat() / getRatio()
-                        else -> overlay.height.toFloat()
+                        PreviewView.ScaleType.FILL_END -> screenWidth / getRatio()
+                        else -> screenHeight
                     }
                     false -> when (scaleType) {
                         PreviewView.ScaleType.FILL_START,
                         PreviewView.ScaleType.FILL_CENTER,
-                        PreviewView.ScaleType.FILL_END -> overlay.height.toFloat()
-                        else -> overlay.width.toFloat() * getRatio()
+                        PreviewView.ScaleType.FILL_END -> screenHeight
+                        else -> screenWidth * getRatio()
                     }
                 }
             }
@@ -119,13 +121,13 @@ open class GraphicOverlay(context: Context?, attrs: AttributeSet?) :
             fun getPreviewOffsetX(): Float = when (isLandScapeMode()) {
                 true -> when (scaleType) {
                     PreviewView.ScaleType.FIT_START -> 0f
-                    PreviewView.ScaleType.FIT_END -> overlay.width - getPreviewWidth()
-                    else -> (overlay.width - getPreviewWidth()) / 2
+                    PreviewView.ScaleType.FIT_END -> screenWidth - getPreviewWidth()
+                    else -> (screenWidth - getPreviewWidth()) / 2
                 }
                 false -> when (scaleType) {
                     PreviewView.ScaleType.FILL_START -> 0f
-                    PreviewView.ScaleType.FILL_END -> overlay.width - getPreviewWidth()
-                    else -> (overlay.width - getPreviewWidth()) / 2
+                    PreviewView.ScaleType.FILL_END -> screenWidth - getPreviewWidth()
+                    else -> (screenWidth - getPreviewWidth()) / 2
                 }
             }
 
@@ -135,13 +137,13 @@ open class GraphicOverlay(context: Context?, attrs: AttributeSet?) :
                     PreviewView.ScaleType.FIT_START,
                     PreviewView.ScaleType.FIT_CENTER,
                     PreviewView.ScaleType.FIT_END -> 0f
-                    PreviewView.ScaleType.FILL_END -> overlay.height - getPreviewHeight()
-                    else -> (overlay.height - getPreviewHeight()) / 2
+                    PreviewView.ScaleType.FILL_END -> screenHeight - getPreviewHeight()
+                    else -> (screenHeight - getPreviewHeight()) / 2
                 }
                 false -> when (scaleType) {
                     PreviewView.ScaleType.FIT_START -> 0f
-                    PreviewView.ScaleType.FIT_END -> overlay.height - getPreviewHeight()
-                    else -> (overlay.height - getPreviewHeight()) / 2
+                    PreviewView.ScaleType.FIT_END -> screenHeight - getPreviewHeight()
+                    else -> (screenHeight - getPreviewHeight()) / 2
                 }
             }
 
@@ -163,14 +165,19 @@ open class GraphicOverlay(context: Context?, attrs: AttributeSet?) :
                 bottom = boundingBoxT.bottom * scale + offsetY
             }
 
-//            // for front mode
-//            if (overlay.isFrontMode()) {
-//                val centerX = overlay.width.toFloat() / 2
-//                mappedBox.apply {
-//                    left = centerX + (centerX - left)
-//                    right = centerX - (right - centerX)
-//                }
-//            }
+            // for front mode
+            if (overlay.isFrontMode()) {
+                val centerX = screenWidth / 2f
+                val offset = when (scaleType) {
+                    PreviewView.ScaleType.FILL_START -> screenWidth - previewWidth
+                    PreviewView.ScaleType.FILL_END -> previewWidth - screenWidth
+                    else -> 0f
+                }
+                mappedBox.apply {
+                    left = centerX + (centerX - left) - offset
+                    right = centerX - (right - centerX) - offset
+                }
+            }
             return mappedBox
         }
     }

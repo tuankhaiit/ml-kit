@@ -8,6 +8,7 @@ import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
+import androidx.camera.core.CameraSelector
 import androidx.camera.view.PreviewView
 import androidx.core.content.FileProvider
 import androidx.databinding.DataBindingUtil
@@ -209,7 +210,8 @@ class MainActivity : AppCompatActivity() {
     private fun openCameraX() {
         supportFragmentManager.beginTransaction().let {
             val config = CameraXConfiguration.Builder()
-                .setPreviewScaleType(PreviewView.ScaleType.FIT_END)
+                .setCameraFacing(CameraSelector.LENS_FACING_FRONT)
+                .setPreviewScaleType(PreviewView.ScaleType.FILL_CENTER)
                 .build()
             val fragment = CameraXFragment.newInstance(config)
             it.add(android.R.id.content, fragment, "CameraX")

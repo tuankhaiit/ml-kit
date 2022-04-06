@@ -42,6 +42,8 @@ class CameraXFragment : Fragment() {
     private val viewModel: CameraXViewModel by viewModels()
     private lateinit var binding: FragmentCameraBinding
 
+    private lateinit var config: CameraXConfiguration
+
     private val mainExecutor by lazy {
         ContextCompat.getMainExecutor(requireContext())
     }
@@ -86,25 +88,29 @@ class CameraXFragment : Fragment() {
     }
 
     // Analysis
-    private val imageAnalysis by lazy {
+    private val faceDetectionAnalysis by lazy {
         ImageAnalysis.Builder()
 //            .setTargetResolution(Size(1280, 720))
             .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
             .build()
             .also {
+                val faceDetectionProcessor = FaceContourDetectionProcessor(
+                    binding.graphicOverlay,
+                    previewScaleType,
+                    aspectRatio
+                )
                 it.setAnalyzer(mainExecutor, faceDetectionProcessor)
             }
     }
 
-    // Face detection
-    private val faceDetectionProcessor by lazy {
-        FaceContourDetectionProcessor(binding.graphicOverlay, previewScaleType, aspectRatio)
-    }
-
-    private var cameraFacing: Int = CameraSelector.LENS_FACING_BACK
+    private var cameraFacing: Int = DEFAULT_CAMERA_FACING
+        set(value) {
+            field = value
+            binding.graphicOverlay.cameraFacing = value
+        }
     private var flashOn = false
-    private var aspectRatio = AspectRatio.RATIO_16_9
-    private var previewScaleType = PreviewView.ScaleType.FIT_END
+    private var aspectRatio = DEFAULT_ASPECT_RATIO
+    private var previewScaleType = DEFAULT_PREVIEW_SCALE_TYPE
 
     // Animation focus view when tap on screen
     private val focusView by lazy {
@@ -152,7 +158,10 @@ class CameraXFragment : Fragment() {
         initViews()
         initCamera()
         initEvents()
+    }
 
+    override fun onResume() {
+        super.onResume()
         startCamera()
     }
 
@@ -164,11 +173,13 @@ class CameraXFragment : Fragment() {
     override fun onStop() {
         super.onStop()
         orientationEventListener.disable()
-        faceDetectionProcessor.stop()
     }
 
     private fun initConfig() {
-        (arguments?.getSerializable(CONFIGURATION_KEY) as? CameraXConfiguration)?.let { config ->
+        config = arguments?.getSerializable(CONFIGURATION_KEY) as? CameraXConfiguration
+            ?: CameraXConfiguration.Builder().build()
+        config.let { config ->
+            cameraFacing = config.cameraFacing
             aspectRatio = config.aspectRatio
             previewScaleType = config.previewScaleType
         }
@@ -189,6 +200,7 @@ class CameraXFragment : Fragment() {
             takePhoto()
         }
         binding.viewFinder.let { surfaceView ->
+            surfaceView.implementationMode = PreviewView.ImplementationMode.PERFORMANCE
             surfaceView.scaleType = previewScaleType
             surfaceView.setOnTouchListener { _, event ->
                 if (event.action == MotionEvent.ACTION_DOWN) {
@@ -246,12 +258,16 @@ class CameraXFragment : Fragment() {
                     .build()
 
                 // Bind use cases to camera
+                val useCaseGroup = UseCaseGroup.Builder()
+                    .addUseCase(preview)
+                    .addUseCase(imageCapture)
+                if (config.enableFaceDetection) {
+                    useCaseGroup.addUseCase(faceDetectionAnalysis)
+                }
                 camera = cameraProvider.bindToLifecycle(
                     viewLifecycleOwner,
                     cameraSelector,
-                    preview,
-                    imageCapture,
-                    imageAnalysis
+                    useCaseGroup.build()
                 )
                 updateExposureBar()
             } catch (e: Exception) {
@@ -351,6 +367,9 @@ class CameraXFragment : Fragment() {
     }
 
     companion object {
+        const val DEFAULT_CAMERA_FACING = CameraSelector.LENS_FACING_BACK
+        const val DEFAULT_ASPECT_RATIO = AspectRatio.RATIO_16_9
+        val DEFAULT_PREVIEW_SCALE_TYPE = PreviewView.ScaleType.FIT_END
         private const val CONFIGURATION_KEY = "CONFIGURATION"
         private const val TEMP_FILE_NAME = "temp_photo.jpeg"
 

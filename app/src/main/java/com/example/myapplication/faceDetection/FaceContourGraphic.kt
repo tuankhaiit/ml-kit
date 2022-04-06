@@ -16,23 +16,12 @@ class FaceContourGraphic(
     private val imageRect: Rect
 ) : GraphicOverlay.Graphic(overlay, scaleType, aspectRatio) {
 
-    private val facePositionPaint: Paint
-    private val idPaint: Paint
-    private val boxPaint: Paint
-
-    init {
-        val selectedColor = Color.WHITE
-
-        facePositionPaint = Paint()
-        facePositionPaint.color = selectedColor
-
-        idPaint = Paint()
-        idPaint.color = selectedColor
-
-        boxPaint = Paint()
-        boxPaint.color = selectedColor
-        boxPaint.style = Paint.Style.STROKE
-        boxPaint.strokeWidth = BOX_STROKE_WIDTH
+    private val boxPaint: Paint by lazy {
+        Paint().apply {
+            color = Color.WHITE
+            style = Paint.Style.STROKE
+            strokeWidth = BOX_STROKE_WIDTH
+        }
     }
 
     override fun draw(canvas: Canvas?) {

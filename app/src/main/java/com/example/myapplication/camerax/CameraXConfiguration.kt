@@ -1,30 +1,50 @@
 package com.example.myapplication.camerax
 
-import androidx.camera.core.AspectRatio
 import androidx.camera.view.PreviewView
 import java.io.Serializable
 
 class CameraXConfiguration private constructor(
+    val cameraFacing: Int,
     val aspectRatio: Int,
-    val previewScaleType: PreviewView.ScaleType
+    val previewScaleType: PreviewView.ScaleType,
+    val enableFaceDetection: Boolean,
+    val enableQRCodeDetection: Boolean,
+    val enableTextReconization: Boolean,
 ) : Serializable {
 
     class Builder {
-        private var aspectRatio = AspectRatio.RATIO_16_9
-        private var previewScaleType = PreviewView.ScaleType.FIT_END
+        private var cameraFacing = CameraXFragment.DEFAULT_CAMERA_FACING
+        private var aspectRatio = CameraXFragment.DEFAULT_ASPECT_RATIO
+        private var previewScaleType = CameraXFragment.DEFAULT_PREVIEW_SCALE_TYPE
 
-        fun setAspectRatio(aspectRatio: Int): CameraXConfiguration.Builder {
+        var enableFaceDetection = false
+        var enableQRCodeDetection = false
+        var enableTextReconization = false
+
+        fun setAspectRatio(aspectRatio: Int): Builder {
             this.aspectRatio = aspectRatio
             return this
         }
 
-        fun setPreviewScaleType(previewScaleType: PreviewView.ScaleType): CameraXConfiguration.Builder {
+        fun setCameraFacing(cameraFacing: Int): Builder {
+            this.cameraFacing = cameraFacing
+            return this
+        }
+
+        fun setPreviewScaleType(previewScaleType: PreviewView.ScaleType): Builder {
             this.previewScaleType = previewScaleType
             return this
         }
 
         fun build(): CameraXConfiguration {
-            return CameraXConfiguration(aspectRatio, previewScaleType)
+            return CameraXConfiguration(
+                cameraFacing,
+                aspectRatio,
+                previewScaleType,
+                enableFaceDetection,
+                enableQRCodeDetection,
+                enableTextReconization
+            )
         }
     }
 }
