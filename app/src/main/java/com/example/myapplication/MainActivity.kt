@@ -210,8 +210,9 @@ class MainActivity : AppCompatActivity() {
     private fun openCameraX() {
         supportFragmentManager.beginTransaction().let {
             val config = CameraXConfiguration.Builder()
-                .setCameraFacing(CameraSelector.LENS_FACING_FRONT)
+                .setCameraFacing(CameraSelector.LENS_FACING_BACK)
                 .setPreviewScaleType(PreviewView.ScaleType.FILL_CENTER)
+                .enableBarcodeDetection()
                 .build()
             val fragment = CameraXFragment.newInstance(config)
             it.add(android.R.id.content, fragment, "CameraX")

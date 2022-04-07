@@ -2,6 +2,7 @@ package com.example.myapplication.camerax
 
 import android.annotation.SuppressLint
 import android.os.Bundle
+import android.util.Size
 import android.util.TypedValue
 import android.view.*
 import android.widget.ProgressBar
@@ -23,8 +24,10 @@ import com.example.myapplication.BitmapUtils
 import com.example.myapplication.CameraXViewModel
 import com.example.myapplication.MainViewModel
 import com.example.myapplication.R
+import com.example.myapplication.barcodeDetection.BarcodeContourDetectionProcessor
 import com.example.myapplication.databinding.FragmentCameraBinding
 import com.example.myapplication.faceDetection.FaceContourDetectionProcessor
+import com.example.myapplication.textDetection.TextContourDetectionProcessor
 import com.google.common.util.concurrent.ListenableFuture
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.CoroutineStart
@@ -41,9 +44,7 @@ class CameraXFragment : Fragment() {
     private val sharedViewModel: MainViewModel by activityViewModels()
     private val viewModel: CameraXViewModel by viewModels()
     private lateinit var binding: FragmentCameraBinding
-
     private lateinit var config: CameraXConfiguration
-
     private val mainExecutor by lazy {
         ContextCompat.getMainExecutor(requireContext())
     }
@@ -87,10 +88,10 @@ class CameraXFragment : Fragment() {
             .build()
     }
 
-    // Analysis
+    // Face Detection
     private val faceDetectionAnalysis by lazy {
         ImageAnalysis.Builder()
-//            .setTargetResolution(Size(1280, 720))
+            .setTargetAspectRatio(aspectRatio)
             .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
             .build()
             .also {
@@ -100,6 +101,40 @@ class CameraXFragment : Fragment() {
                     aspectRatio
                 )
                 it.setAnalyzer(mainExecutor, faceDetectionProcessor)
+            }
+    }
+
+    // Barcode Scanning
+    private val barcodeDetectionAnalysis by lazy {
+        ImageAnalysis.Builder()
+            .setTargetResolution(
+                Size(1080, 1920),
+            )
+            .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
+            .build()
+            .also {
+                val barcodeDetectionProcessor = BarcodeContourDetectionProcessor(
+                    binding.graphicOverlay,
+                    previewScaleType,
+                    aspectRatio
+                )
+                it.setAnalyzer(mainExecutor, barcodeDetectionProcessor)
+            }
+    }
+
+    // Text Recognization
+    private val textDetectionAnalysis by lazy {
+        ImageAnalysis.Builder()
+            .setTargetAspectRatio(aspectRatio)
+            .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
+            .build()
+            .also {
+                val textDetectionProcessor = TextContourDetectionProcessor(
+                    binding.graphicOverlay,
+                    previewScaleType,
+                    aspectRatio
+                )
+                it.setAnalyzer(mainExecutor, textDetectionProcessor)
             }
     }
 
@@ -261,8 +296,16 @@ class CameraXFragment : Fragment() {
                 val useCaseGroup = UseCaseGroup.Builder()
                     .addUseCase(preview)
                     .addUseCase(imageCapture)
-                if (config.enableFaceDetection) {
-                    useCaseGroup.addUseCase(faceDetectionAnalysis)
+                when {
+                    config.enableFaceDetection -> {
+                        useCaseGroup.addUseCase(faceDetectionAnalysis)
+                    }
+                    config.enableBarcodeDetection -> {
+                        useCaseGroup.addUseCase(barcodeDetectionAnalysis)
+                    }
+                    config.enableTextRecognition -> {
+                        useCaseGroup.addUseCase(textDetectionAnalysis)
+                    }
                 }
                 camera = cameraProvider.bindToLifecycle(
                     viewLifecycleOwner,

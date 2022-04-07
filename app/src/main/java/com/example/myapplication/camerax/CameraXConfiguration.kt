@@ -8,8 +8,8 @@ class CameraXConfiguration private constructor(
     val aspectRatio: Int,
     val previewScaleType: PreviewView.ScaleType,
     val enableFaceDetection: Boolean,
-    val enableQRCodeDetection: Boolean,
-    val enableTextReconization: Boolean,
+    val enableBarcodeDetection: Boolean,
+    val enableTextRecognition: Boolean,
 ) : Serializable {
 
     class Builder {
@@ -17,9 +17,9 @@ class CameraXConfiguration private constructor(
         private var aspectRatio = CameraXFragment.DEFAULT_ASPECT_RATIO
         private var previewScaleType = CameraXFragment.DEFAULT_PREVIEW_SCALE_TYPE
 
-        var enableFaceDetection = false
-        var enableQRCodeDetection = false
-        var enableTextReconization = false
+        private var enableFaceDetection = false
+        private var enableBarcodeDetection = false
+        private var enableTextRecognition = false
 
         fun setAspectRatio(aspectRatio: Int): Builder {
             this.aspectRatio = aspectRatio
@@ -36,14 +36,35 @@ class CameraXConfiguration private constructor(
             return this
         }
 
+        fun enableFaceDetection(): Builder {
+            enableFaceDetection = true
+            enableTextRecognition = false
+            enableBarcodeDetection = false
+            return this
+        }
+
+        fun enableBarcodeDetection(): Builder {
+            enableFaceDetection = false
+            enableTextRecognition = false
+            enableBarcodeDetection = true
+            return this
+        }
+
+        fun enableTextDetection(): Builder {
+            enableFaceDetection = false
+            enableTextRecognition = true
+            enableBarcodeDetection = false
+            return this
+        }
+
         fun build(): CameraXConfiguration {
             return CameraXConfiguration(
                 cameraFacing,
                 aspectRatio,
                 previewScaleType,
                 enableFaceDetection,
-                enableQRCodeDetection,
-                enableTextReconization
+                enableBarcodeDetection,
+                enableTextRecognition
             )
         }
     }
