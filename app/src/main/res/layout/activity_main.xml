@@ -9,6 +9,17 @@
         android:orientation="vertical"
         tools:context=".MainActivity">
 
+        <androidx.appcompat.widget.AppCompatTextView
+            android:id="@+id/btnStatus"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content" />
+
+        <androidx.appcompat.widget.AppCompatButton
+            android:id="@+id/btnOpenAwesomeLayout"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Awesome Layout" />
+
         <androidx.appcompat.widget.AppCompatButton
             android:id="@+id/btnGallery"
             android:layout_width="wrap_content"

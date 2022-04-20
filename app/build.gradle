@@ -2,6 +2,7 @@ plugins {
     id 'com.android.application'
     id 'org.jetbrains.kotlin.android'
     id 'kotlin-kapt'
+    id 'kotlin-parcelize'
 }
 
 android {
@@ -48,10 +49,13 @@ dependencies {
     // Kotlin
     implementation "androidx.activity:activity-ktx:1.4.0"
     implementation "androidx.fragment:fragment-ktx:1.4.1"
+    implementation 'androidx.legacy:legacy-support-v4:1.0.0'
+    implementation 'androidx.recyclerview:recyclerview:1.2.1'
 
     def lifecycle_version = "2.5.0-alpha06"
     // ViewModel
     implementation "androidx.lifecycle:lifecycle-viewmodel-ktx:$lifecycle_version"
+    implementation "androidx.lifecycle:lifecycle-runtime-ktx:2.4.1"
 
     // CameraX core library using the camera2 implementation
     def camerax_version = "1.1.0-beta03"
@@ -71,6 +75,10 @@ dependencies {
     implementation 'com.google.mlkit:barcode-scanning:17.0.2'
     implementation 'com.google.mlkit:text-recognition:16.0.0-beta3'
     implementation 'com.google.mlkit:face-detection:16.1.5'
+
+    // Layout
+    implementation "androidx.window:window:1.0.0"
+    implementation "androidx.slidingpanelayout:slidingpanelayout:1.2.0"
 
     testImplementation 'junit:junit:4.13.2'
     androidTestImplementation 'androidx.test.ext:junit:1.1.3'

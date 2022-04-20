@@ -13,6 +13,7 @@ import androidx.camera.view.PreviewView
 import androidx.core.content.FileProvider
 import androidx.databinding.DataBindingUtil
 import androidx.lifecycle.lifecycleScope
+import com.example.myapplication.awesomeLayout.AwesomeLayoutActivity
 import com.example.myapplication.camerax.CameraXConfiguration
 import com.example.myapplication.camerax.CameraXFragment
 import com.example.myapplication.databinding.ActivityMainBinding
@@ -40,11 +41,26 @@ class MainActivity : AppCompatActivity() {
         initViews()
         initFlows()
 
-        openCameraX()
+        binding.btnOpenAwesomeLayout.performClick()
+
+//        lifecycleScope.launch {
+//            repeatOnLifecycle(Lifecycle.State.STARTED) {
+//                WindowInfoTracker.getOrCreate(this@MainActivity)
+//                    .windowLayoutInfo(this@MainActivity)
+//                    .collect { newLayoutInfo ->
+//                        val foldingFeature = newLayoutInfo.displayFeatures
+//                            .filterIsInstance<DisplayFeature>()
+//                            .firstOrNull()
+//                    }
+//            }
+//        }
     }
 
     private fun initViews() {
         binding.apply {
+            btnOpenAwesomeLayout.setOnClickListener {
+                AwesomeLayoutActivity.start(this@MainActivity)
+            }
             btnCameraX.setOnClickListener {
                 permissionCameraXRequestLauncher.launch(
                     arrayOf(

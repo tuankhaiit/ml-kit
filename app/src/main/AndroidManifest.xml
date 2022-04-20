@@ -17,6 +17,12 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.MyApplication">
         <activity
+            android:name=".awesomeLayout.slidingPane.SlidingPaneActivity"
+            android:exported="false" />
+        <activity
+            android:name=".awesomeLayout.AwesomeLayoutActivity"
+            android:exported="false" />
+        <activity
             android:name=".MainActivity"
             android:exported="true">
             <intent-filter>

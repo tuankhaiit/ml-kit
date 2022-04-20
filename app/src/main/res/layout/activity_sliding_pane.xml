@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+
+    <androidx.slidingpanelayout.widget.SlidingPaneLayout
+        android:id="@+id/slidingPaneLayout"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        tools:context=".awesomeLayout.slidingPane.SlidingPaneActivity">
+
+        <androidx.fragment.app.FragmentContainerView
+            android:id="@+id/paneFragment"
+            android:name="com.example.myapplication.awesomeLayout.simpleList.ItemListFragment"
+            android:layout_width="280dp"
+            android:layout_height="match_parent"
+            android:background="@android:color/holo_orange_light" />
+
+        <androidx.fragment.app.FragmentContainerView
+            android:id="@+id/detailFragment"
+            android:name="com.example.myapplication.awesomeLayout.simpleList.ItemDetailFragment"
+            android:layout_width="300dp"
+            android:layout_height="match_parent"
+            android:background="@android:color/holo_blue_light" />
+
+    </androidx.slidingpanelayout.widget.SlidingPaneLayout>
+</layout>
